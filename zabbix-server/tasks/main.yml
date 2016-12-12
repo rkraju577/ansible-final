@@ -1,0 +1,44 @@
+---
+
+- name: Install Zabbix nginx config
+  template: src=templates/nginx/sites-available/zabbix.j2 dest=/etc/nginx/sites-available/zabbix
+  notify: Reload nginx
+
+- name: Enable Zabbix nginx config
+  file: src=/etc/nginx/sites-available/zabbix dest=/etc/nginx/sites-enabled/zabbix state=link
+  notify: Reload nginx
+
+# The next three steps are expected to be peformed by Zabbix's setup wizard. We do it here so
+# the service will spin up configured and ready to serve.
+
+- name: Create Zabbix PHP configuration directory
+  file: path=/etc/zabbix/web state=directory
+
+- name: Install Zabbix PHP configuration
+  template: src=templates/zabbix/web/zabbix.conf.php.j2 dest=/usr/share/zabbix/conf/zabbix.conf.php
+  notify: Restart php
+
+- name: Create Zappix PHP configuration link
+  file: src=/usr/share/zabbix/conf/zabbix.conf.php dest=/etc/zabbix/web/zabbix.conf.php state=link
+
+- name: Create mysql zabbix database
+  mysql_db: name=zabbix state=present
+
+- name: create database user for zabbix
+  mysql_user: name=zabbix password=AsseT@123 priv=zabbix.*:ALL,GRANT state=present
+
+- name: Import mysql initial schema to zabbix database
+  shell: /bin/zcat /usr/share/doc/zabbix-server-mysql/create.sql.gz | mysql -uroot zabbix
+  notify: Restart zabbix server
+
+- name: Change database setting on zabbix config file
+  lineinfile: dest=/etc/zabbix/zabbix_server.conf  regexp=^#DBPassword= line=DBPassword=AsseT@123
+
+- name: deleting default-sites files from sites-enable 
+  file: path=/etc/nginx/sites-enabled/default-site state=absent
+
+# FIXME Create a pool for Zabbix based on www.conf.
+- name: Configure Zabbix PHP FPM pool
+  lineinfile: dest=/etc/php5/fpm/pool.d/www.conf regexp="^[;]*{{ item.name }}\s*=.*$" line="{{ item.name }} = {{ item.value }}" state=present
+  with_items: php_pool_conf
+  notify: Restart php

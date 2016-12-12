@@ -1,0 +1,8 @@
+---
+
+dependencies:
+  - { role: utility/certificate, domain: assetnation.com }
+  - { role: service/php5 }
+  - { role: utility/apt-source, desc: Zabbix server, key_server: "{{ apt_key_server_zabbix }}",
+      key_id: "{{ apt_key_id_zabbix }}", source: "{{ apt_source_zabbix }}" }
+  - { role: utility/install, desc: Zabbix server, packages: "{{ packages_zabbix_server }}" }

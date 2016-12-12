@@ -1,0 +1,60 @@
+server {
+  {% if zabbix_server_names|length == 1 %}
+    server_name {{ zabbix_server_names.0 }};
+  {% else %}
+    server_name
+  {% for server_name in zabbix_server_names %}
+      {{ server_name }}{% if loop.last %};{% endif %}
+
+  {% endfor %}
+  {% endif %}
+
+  include includes/default-document-root;
+  listen 80;
+  include includes/require-https;
+}
+
+server {
+  {% if zabbix_server_names|length == 1 %}
+    server_name {{ zabbix_server_names.0 }};
+  {% else %}
+    server_name
+  {% for server_name in zabbix_server_names %}
+      {{ server_name }}{% if loop.last %};{% endif %}
+
+  {% endfor %}
+  {% endif %}
+
+  root /usr/share/zabbix;
+  listen 443 ssl;
+  index index.php;
+  client_max_body_size 5m;
+  client_body_buffer_size 128k;
+  #error_page 403 404 502 503 504 /index.php;
+
+  include includes/ssl-assetnation.com;
+  include includes/block-sensitive-files;
+  include includes/forbid-robots;
+  include includes/nginx-status-page;
+  include includes/php-status-page;
+  include includes/php-opcache-status-page;
+
+  access_log /var/log/nginx/zabbix_access.log;
+  error_log /var/log/nginx/zabbix_error.log;
+
+  location ~ \.php$ {
+    include includes/authorized-addresses;
+    deny all;
+
+    if (!-f $request_filename) { return 404; }
+    expires epoch;
+    fastcgi_pass unix:/var/run/php5-fpm.sock;
+    include fastcgi_params;
+    fastcgi_index index.php;
+  }
+
+  location ~ \.(jpg|jpeg|gif|png|ico)$ {
+    access_log off;
+    expires 33d;
+  }
+}

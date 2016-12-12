@@ -1,0 +1,10 @@
+---
+
+- name: Reload nginx
+  service: name=nginx state=restarted
+
+- name: Restart php
+  service: name=php5-fpm state=restarted
+
+- name: Restart zabbix server
+  service: name=zabbix-server state=restarted
